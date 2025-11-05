@@ -7,16 +7,16 @@ import (
 	"net/http"
 )
 
-type JsonArticleHandler struct {
+type ArticleHandler struct {
 	service  *service.ArticleService
 	renderer render.Renderer
 }
 
-func NewArticleHandler(service *service.ArticleService, renderer render.Renderer) *JsonArticleHandler {
-	return &JsonArticleHandler{service: service, renderer: renderer}
+func NewArticleHandler(service *service.ArticleService, renderer render.Renderer) *ArticleHandler {
+	return &ArticleHandler{service: service, renderer: renderer}
 }
 
-func (h *JsonArticleHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *ArticleHandler) List(w http.ResponseWriter, r *http.Request) {
 	//articles, err := h.service.GetArticles()
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -29,7 +29,7 @@ func (h *JsonArticleHandler) List(w http.ResponseWriter, r *http.Request) {
 	h.renderer.Render(w, articles)
 }
 
-func (h *JsonArticleHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+func (h *ArticleHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	article, err := h.service.GetArticle()
 	if err != nil {
 		panic(err)
