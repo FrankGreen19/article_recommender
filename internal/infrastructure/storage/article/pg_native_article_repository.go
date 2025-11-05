@@ -1,4 +1,4 @@
-package storage
+package article
 
 import (
 	"article_recommender/internal/domain"

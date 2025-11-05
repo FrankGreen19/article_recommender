@@ -3,7 +3,7 @@ package app
 import (
 	http2 "article_recommender/internal/infrastructure/handler/http"
 	"article_recommender/internal/infrastructure/render"
-	storage "article_recommender/internal/infrastructure/storage"
+	storage "article_recommender/internal/infrastructure/storage/article"
 	service2 "article_recommender/internal/usecase/service"
 	"log"
 	"net/http"
