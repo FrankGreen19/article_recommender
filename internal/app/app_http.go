@@ -1,9 +1,9 @@
 package app
 
 import (
-	http2 "article_recommender/internal/infrastructure/handler/http"
 	"article_recommender/internal/infrastructure/render"
 	storage "article_recommender/internal/infrastructure/storage/article"
+	http2 "article_recommender/internal/interface/http/handler"
 	service2 "article_recommender/internal/usecase/service"
 	"fmt"
 	"log"

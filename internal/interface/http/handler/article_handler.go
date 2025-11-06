@@ -1,4 +1,4 @@
-package http
+package handler
 
 import (
 	"article_recommender/internal/domain"
