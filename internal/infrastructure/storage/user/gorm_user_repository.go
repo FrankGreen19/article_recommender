@@ -26,10 +26,16 @@ func (r *GormUserRepository) GetUserByLoginAndPassword(login string, password st
 }
 
 func (r *GormUserRepository) SaveUser(user *domain.User) error {
-	err := r.db.Save(&user).Error
+	return r.db.Save(&user).Error
+}
+
+func (r *GormUserRepository) GetUserByEmail(email string) (*domain.User, error) {
+	var user domain.User
+
+	err := r.db.First(&user, "email = ?", email).Error
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &user, nil
 }
