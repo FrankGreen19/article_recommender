@@ -17,7 +17,7 @@ func NewGormUserRepository(db *gorm.DB) *GormUserRepository {
 func (r *GormUserRepository) GetUserByLoginAndPassword(login string, password string) (*domain.User, error) {
 	var user domain.User
 
-	err := r.db.First(&user, "login = ? AND password = ?", login, password).Error
+	err := r.db.First(&user, "email = ? AND password = ?", login, password).Error
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (r *GormUserRepository) GetUserByLoginAndPassword(login string, password st
 	return &user, nil
 }
 
-func (r *GormUserRepository) SaveUser(user domain.User) error {
+func (r *GormUserRepository) SaveUser(user *domain.User) error {
 	err := r.db.Save(&user).Error
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ package app
 import (
 	"article_recommender/internal/infrastructure/render"
 	storage "article_recommender/internal/infrastructure/storage/article"
+	"article_recommender/internal/infrastructure/storage/user"
 	http2 "article_recommender/internal/interface/http/handler"
 	service2 "article_recommender/internal/usecase/service"
 	"fmt"
@@ -41,6 +42,7 @@ func NewAppHttp() *App {
 
 	// GORM group
 	mux.HandleFunc("/article/json", geHttpArticleHandler(db).GetByID)
+	mux.HandleFunc("/user/login", getHttpAuthHandler(db).Login)
 
 	srv := &http.Server{
 		Addr:    ":8080",
@@ -71,4 +73,12 @@ func geHttpArticleHandler(db *gorm.DB) *http2.ArticleHandler {
 	renderer := render.JSONRenderer{}
 
 	return http2.NewArticleHandler(service, renderer)
+}
+
+func getHttpAuthHandler(db *gorm.DB) *http2.AuthHandler {
+	repo := user.NewGormUserRepository(db)
+	service := service2.NewAuthService(repo)
+	renderer := render.JSONRenderer{}
+
+	return http2.NewAuthHandler(service, renderer)
 }
