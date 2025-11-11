@@ -80,7 +80,7 @@ func geHttpArticleHandler(db *gorm.DB) *http2.ArticleHandler {
 func getHttpAuthHandler(db *gorm.DB) *http2.AuthHandler {
 	repo := user.NewGormUserRepository(db)
 	hasher := security.NewBcryptPasswordHasher()
-	service := service2.NewAuthService(repo, hasher)
+	service := service2.NewUserService(repo, hasher)
 	renderer := render.JSONRenderer{}
 
 	return http2.NewAuthHandler(service, renderer)

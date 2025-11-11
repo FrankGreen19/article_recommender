@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-type AuthRepository interface {
+type UserRepository interface {
 	GetUserByLoginAndPassword(string, string) (*domain.User, error)
 	SaveUser(*domain.User) error
 	GetUserByEmail(string) (*domain.User, error)
@@ -17,16 +17,16 @@ type PasswordHasher interface {
 	Compare(hash, password string) bool
 }
 
-type AuthService struct {
-	authRepo AuthRepository
+type UserService struct {
+	authRepo UserRepository
 	hasher   PasswordHasher
 }
 
-func NewAuthService(authRepo AuthRepository, hasher PasswordHasher) *AuthService {
-	return &AuthService{authRepo: authRepo, hasher: hasher}
+func NewUserService(authRepo UserRepository, hasher PasswordHasher) *UserService {
+	return &UserService{authRepo: authRepo, hasher: hasher}
 }
 
-func (service *AuthService) Login(email string, password string) (*domain.User, error) {
+func (service *UserService) GetByEmailAndPassword(email string, password string) (*domain.User, error) {
 	user, err := service.authRepo.GetUserByEmail(email)
 	if err != nil {
 		return nil, errors.New("invalid credentials")
@@ -39,7 +39,7 @@ func (service *AuthService) Login(email string, password string) (*domain.User, 
 	return user, nil
 }
 
-func (service *AuthService) Register(user *domain.User) (*domain.User, error) {
+func (service *UserService) Create(user *domain.User) (*domain.User, error) {
 	if _, err := service.authRepo.GetUserByEmail(user.Email); err == nil {
 		return nil, errors.New("user with this email already exists")
 	}

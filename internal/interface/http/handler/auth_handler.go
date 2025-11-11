@@ -11,11 +11,11 @@ import (
 )
 
 type AuthHandler struct {
-	service  *service.AuthService
+	service  *service.UserService
 	renderer render.Renderer
 }
 
-func NewAuthHandler(service *service.AuthService, renderer render.Renderer) *AuthHandler {
+func NewAuthHandler(service *service.UserService, renderer render.Renderer) *AuthHandler {
 	return &AuthHandler{service: service, renderer: renderer}
 }
 
@@ -41,7 +41,7 @@ func (handler *AuthHandler) Login(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	user, err := handler.service.Login(loginDto.Email, loginDto.Password)
+	user, err := handler.service.GetByEmailAndPassword(loginDto.Email, loginDto.Password)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
@@ -78,7 +78,7 @@ func (handler *AuthHandler) Register(writer http.ResponseWriter, request *http.R
 	user.Lastname = registerDto.Lastname
 	user.Firstname = registerDto.Firstname
 
-	_, err = handler.service.Register(user)
+	_, err = handler.service.Create(user)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 
