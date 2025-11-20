@@ -1,41 +1,43 @@
 package security
 
 import (
-	"article_recommender/internal/domain"
 	"article_recommender/internal/infrastructure/gorm/entity"
 	"article_recommender/internal/infrastructure/security/dto"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
+	"errors"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type RefreshTokenRepository interface {
-	GetByUserJti(ctx context.Context, jti string) (*entity.RefreshToken, error)
+	GetByJti(ctx context.Context, jti string) (entity.RefreshToken, error)
 	Save(ctx context.Context, token entity.RefreshToken) (entity.RefreshToken, error)
+	Remove(ctx context.Context, token entity.RefreshToken) (entity.RefreshToken, error)
 }
 
 type JwtManager struct {
+	secret           []byte
 	refreshTokenRepo RefreshTokenRepository
 }
 
 func NewJwtManager(repo RefreshTokenRepository) *JwtManager {
-	return &JwtManager{refreshTokenRepo: repo}
+	secret := []byte(os.Getenv("JWT_SECRET"))
+
+	return &JwtManager{secret: secret, refreshTokenRepo: repo}
 }
 
-func (jwtManager *JwtManager) Generate(user *domain.User) (dto.JwtPair, error) {
-	secret := make([]byte, 32)
-
+func (jwtManager *JwtManager) Generate(ctx context.Context, userId int64) (dto.JwtPair, error) {
 	atClaims := jwt.MapClaims{
-		"user_id": user.Id,
+		"user_id": userId,
 		"exp":     time.Now().Add(15 * time.Minute).Unix(),
 		"jti":     generateJTI(),
 	}
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
-	accessToken, err := at.SignedString(secret)
+	accessToken, err := at.SignedString(jwtManager.secret)
 	if err != nil {
 		return dto.JwtPair{}, err
 	}
@@ -43,12 +45,12 @@ func (jwtManager *JwtManager) Generate(user *domain.User) (dto.JwtPair, error) {
 	rtJti := generateJTI()
 	rtExpiresAt := time.Now().Add(7 * 24 * time.Hour)
 	rtClaims := jwt.MapClaims{
-		"user_id": user.Id,
+		"user_id": userId,
 		"exp":     rtExpiresAt.Unix(),
 		"jti":     rtJti,
 	}
 	rt := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
-	refreshToken, err := rt.SignedString(secret)
+	refreshToken, err := rt.SignedString(jwtManager.secret)
 	if err != nil {
 		return dto.JwtPair{}, err
 	}
@@ -57,35 +59,46 @@ func (jwtManager *JwtManager) Generate(user *domain.User) (dto.JwtPair, error) {
 	refreshTokenEnt.Jti = rtJti
 	refreshTokenEnt.TokenHash = refreshToken
 	refreshTokenEnt.Revoked = false
-	refreshTokenEnt.UserId = user.Id
+	refreshTokenEnt.UserId = userId
 	refreshTokenEnt.ExpiresAt = rtExpiresAt
 
-	if _, err := jwtManager.refreshTokenRepo.Save(refreshTokenEnt); err != nil {
+	if _, err := jwtManager.refreshTokenRepo.Save(ctx, refreshTokenEnt); err != nil {
 		return dto.JwtPair{}, err
 	}
 
 	return dto.JwtPair{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 
-func (s *JwtManager) Refresh(user *domain.User, refreshToken string) (string, error) {
-	stored, ok := s.refreshStore[userID]
-	if !ok || stored != refreshToken {
-		return "", fmt.Errorf("invalid refresh token")
-	}
-
+func (jwtManager *JwtManager) Refresh(ctx context.Context, refreshToken string) (dto.JwtPair, error) {
 	rt, err := jwt.Parse(refreshToken, func(t *jwt.Token) (interface{}, error) {
-		return s.secret, nil
+		return jwtManager.secret, nil
 	})
 	if err != nil || !rt.Valid {
-		return "", fmt.Errorf("refresh token expired or invalid")
+		return dto.JwtPair{}, errors.New("refresh token expired or invalid")
 	}
 
-	atClaims := jwt.MapClaims{
-		"user_id": userID,
-		"exp":     time.Now().Add(15 * time.Minute).Unix(),
+	claims, ok := rt.Claims.(jwt.MapClaims)
+	if !ok {
+		return dto.JwtPair{}, errors.New("invalid claims format")
 	}
-	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
-	return at.SignedString(s.secret)
+
+	jti := claims["jti"].(string)
+
+	refreshTokenEnt, err := jwtManager.refreshTokenRepo.GetByJti(ctx, jti)
+	if err != nil {
+		return dto.JwtPair{}, err
+	}
+
+	if _, err := jwtManager.refreshTokenRepo.Remove(ctx, refreshTokenEnt); err != nil {
+		return dto.JwtPair{}, err
+	}
+
+	tokens, err := jwtManager.Generate(ctx, int64(claims["user_id"].(float64)))
+	if err != nil {
+		return dto.JwtPair{}, err
+	}
+
+	return tokens, nil
 }
 
 func generateJTI() string {
